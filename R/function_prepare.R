@@ -91,7 +91,7 @@ calc_stat_states <- function(data,df.segm,diag.var,order.var=NULL)
 {
   data$state <- df.segm[findInterval(data$indice,df.segm$begin,rightmost.closed = F,left.open = F),"state"]
 
-  eval_str <- paste("dplyr::group_by(data,state) %>% dplyr::summarise(prop=n()/nrow(data),",paste("mu.",diag.var," = mean(",diag.var,",na.rm=T)",collapse=",",sep=""),",",paste("sd.",diag.var," = stats::sd(",diag.var,",na.rm=T)",collapse=",",sep=""),") %>% as.data.frame()",sep="")
+  eval_str <- paste("dplyr::group_by(data,state) %>% dplyr::summarise(prop=dplyr::n()/nrow(data),",paste("mu.",diag.var," = mean(",diag.var,",na.rm=T)",collapse=",",sep=""),",",paste("sd.",diag.var," = stats::sd(",diag.var,",na.rm=T)",collapse=",",sep=""),") %>% as.data.frame()",sep="")
   df.states <- eval(parse(text=eval_str))
   df.states$state_ordered  <- rank(df.states[,paste("mu",order.var[1],sep=".")])
   return(df.states)
@@ -157,13 +157,15 @@ calc_BIC <- function(likelihood,ncluster,nseg,n){
   return(data.frame(BIC=BIC,ncluster=ncluster,nseg=nseg))
 }
 
-#' Check for exact repetition in the series
+#' Check for repetition in the series
 #'
-#' \code{check_repetition} checks whether the series have exact repetition larger than lmin.
+#' \code{check_repetition} checks whether the series have identical or near-identical repetition larger than lmin.
 #' if that is the case, throw an error, the algorithm cannot yet handle these repetition,
-#' because variance on the segment would be null.
+#' because variance on the segment would be null. 
 #' @param x the bivariate series to be tested
 #' @param lmin minimum length of segment
+#' @param rounding whether or not series are rounded
+#' @param magnitude number of magnitude of standard deviation below which values are rounded. i.e if magnitude = 3, difference smaller than one thousandth of the standard deviation are rounded to the same value.
 #' @return a boolean, TRUE if there is any repetition larger or equal to lmin.
 #'
 #' @export
@@ -174,13 +176,53 @@ calc_BIC <- function(likelihood,ncluster,nseg,n){
 #' check_repetition(dat, lmin = 3)
 #' check_repetition(dat, lmin = 5)             
 
+check_repetition <- function(x,lmin, rounding = FALSE, magnitude = 3){
+    if(rounding){
+      sd_x1 <- stats::sd(x[1,])
+      magn1 <- - base::floor(log10(sd_x1)) +magnitude
+      x1 <- base::round(x[1,], digits = magn1)
+      sd_x2 <- stats::sd(x[2,])
+      magn2 <- - base::floor(log10(sd_x2)) +magnitude
+      x2 <- base::round(x[2,], digits = magn2)
+      rep_1 <- rle(x1)
+      rep_2 <- rle(x2)
+      if( any(rep_1$length >= lmin) || any(rep_2$length >= lmin)){
+        return(TRUE)
+      } else {
+        return(FALSE)
+      } 
+    } else {
+      rep_1 <- rle(x[1,])
+      rep_2 <- rle(x[2,])
+      if( any(rep_1$length >= lmin) || any(rep_2$length >= lmin)){
+        return(TRUE)
+      } else {
+        return(FALSE)
+      } 
+    }
+   
+}
 
-check_repetition <- function(x,lmin){
-  rep_1 <- rle(x[1,])
-  rep_2 <- rle(x[2,])
-  if( any(rep_1$length >= lmin) || any(rep_2$length >= lmin)){
-    return(TRUE)
-  } else {
-    return(FALSE)
-  }
+#' Relabel states of a segmentation/clustering output
+#' 
+#' \code{relabel_states} relabel the states of a segmentation/clustering output.
+#' This allows merging different states into the same if for instance several of
+#' the model states represent the same behavioural states.
+#' @param mode.segclust segclust output
+#' @param newlabel a vector with the new names ordered, corresponding to 
+#'   state_ordered
+#' @param ncluster the number of cluster for which you want relabeling
+#' @param nseg the number of segment for which you want relabeling
+#' @param order boolean, whether this changes the ordered states or not. FALSE 
+#'   value obsolete for now
+#' @return a segmentation object with state names changed for the segmentation
+#'   specified by ncluster and nseg
+#'   
+#' @export
+
+relabel_states <- function(mode.segclust, newlabel, ncluster, nseg, order = TRUE){
+  tmp <- mode.segclust$outputs[[paste0(ncluster," class - ",nseg," segments")]]  
+  tmp$states$state_ordered <- newlabel[tmp$states$state_ordered]
+  mode.segclust$outputs[[paste0(ncluster," class - ",nseg," segments")]]  <- tmp
+  mode.segclust
 }

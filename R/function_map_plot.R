@@ -41,8 +41,8 @@ map_segm <- function(data,output,interactive=F,html=F, scale=1,
 
   data$state = df.segm[findInterval(data$indice,df.segm$begin,rightmost.closed = F,left.open = F),ifelse(order,"state_ordered","state")]
 
-  data$x <- data$x/scale
-  data$y <- data$y/scale
+  data[,coord.names[1]] <- data[,coord.names[1]]/scale
+  data[,coord.names[2]] <- data[,coord.names[2]]/scale
   if(!interactive){
     g <- ggplot2::ggplot(data,ggplot2::aes_string(x=coord.names[1],y=coord.names[2]))+
       ggplot2::geom_path(size = linesize)+
@@ -86,4 +86,54 @@ map_segm <- function(data,output,interactive=F,html=F, scale=1,
     a <- leaflet::leaflet(width=width,height=height)  %>% leaflet::addPolylines(data=dfConnection,color = c("grey"),dashArray = '5,5')  %>%  leaflet::addPolylines(data=dfSPLDF,color =dfSPLDF@data$color)  %>% leaflet::addCircles(data=dfSPPDF,radius=1,color = dfSPPDF@data$colors,popup=paste("point ",as.character(dfSPPDF@data$date)," ; state ",as.character(dfSPPDF@data$state),sep=""))
     return(a)
   }
+}
+
+
+
+
+
+#' \code{segmap_list} create maps with a list of object of \code{segmentation}
+#' class
+#' @param x_list list of segmentation objects for different individuals or path
+#' @param ncluster_list list of number of cluster to be selected for each
+#'   individual. If empty, the function takes the default one
+#' @param nseg_list list of number of segment to be selected for each
+#'   individual. If empty, the function takes the default one
+#' @param pointsize size of points
+#' @param linesize size of lines
+#' @param coord.names names of coordinates
+#' @return a ggplot2 graph
+#'
+#' @export
+segmap_list <-  function(x_list, ncluster_list = NULL, nseg_list = NULL, pointsize = 1, linesize = 0.5, coord.names = c("x","y")){
+  
+  g <- ggplot2::ggplot()
+  for(i in 1:length(x_list)){
+    x <- x_list[[i]]
+    if(is.null(ncluster_list)){
+      ncluster <- x$ncluster.BIC
+    } else {
+      ncluster <- ncluster_list[i]
+    }
+    if(is.null(nseg_list)){
+      nseg <- x$Kopt.BIC[ncluster]
+    } else {
+      nseg <- nseg_list[i]
+    }
+    outputs <-  x$outputs[[paste(ncluster,"class -",nseg, "segments")]]
+    data <- x$data
+    df.segm <- dplyr::left_join(outputs[[1]],outputs[[2]],by="state")
+    data$indice <- 1:nrow(data)
+    data$state = df.segm[findInterval(data$indice,df.segm$begin,rightmost.closed = F,left.open = F),"state_ordered"]
+
+    g <- g + 
+        ggplot2::geom_path(data = data,
+                           ggplot2::aes_string(x=coord.names[1],y=coord.names[2]), 
+                           size = linesize)+
+        ggplot2::geom_point(data = data,
+                            ggplot2::aes_string(x=coord.names[1],y=coord.names[2], col="factor(state)"),
+                            size = pointsize)
+      
+  }
+  return(g)
 }
