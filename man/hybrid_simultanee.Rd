@@ -2,13 +2,24 @@
 % Please edit documentation in R/segTraj_hybrid_simultanee.R
 \name{hybrid_simultanee}
 \alias{hybrid_simultanee}
-\title{\code{hybrid_simultanee} performs a simultaneous seg - clustering for bivariate signals.}
+\title{\code{hybrid_simultanee} performs a simultaneous seg - clustering for
+bivariate signals.}
 \usage{
-hybrid_simultanee(x, P, Kmax, lmin = 3, sameSigma = TRUE,
-  sameVar.init = FALSE, eps = 1e-06, lissage = TRUE, pureR = F)
+hybrid_simultanee(
+  x,
+  P,
+  Kmax,
+  lmin = 3,
+  sameSigma = TRUE,
+  sameVar.init = FALSE,
+  eps = 1e-06,
+  lissage = TRUE,
+  pureR = FALSE,
+  ...
+)
 }
 \arguments{
-\item{x}{the two-dimensionnal signal, one line per dimension}
+\item{x}{the two-dimensional signal, one line per dimension}
 
 \item{P}{the number of classes}
 
@@ -25,9 +36,12 @@ hybrid_simultanee(x, P, Kmax, lmin = 3, sameSigma = TRUE,
 \item{lissage}{should likelihood be smoothed}
 
 \item{pureR}{should algorithm run in full R or use Rcpp speed improvements}
+
+\item{...}{additional parameters}
 }
 \value{
-a list with Linc, the incomplete loglikelihood =Linc,param=paramtau posterior probability
+a list with Linc, the incomplete loglikelihood =Linc,param=paramtau
+  posterior probability
 }
 \description{
 It is an algorithm which combines dynamic programming

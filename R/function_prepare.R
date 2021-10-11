@@ -7,7 +7,7 @@
 #' @param order.var names of the variable with which states are ordered
 #' @param seg.type either 'hybrid' or 'dynprog'
 #' @param nseg number of segment chosen
-#' @param param parameters of ouptput segmentation
+#' @param param parameters of output segmentation
 #' @return  a list which first element is a data.frame with states of the
 #'   different segments and which second element is a data.frame with mean and
 #'   variance of the different states
@@ -24,15 +24,21 @@
 #' @export
 #'
 
-stat_segm <- function(data, diag.var, order.var = NULL, param = NULL, seg.type = NULL, nseg){
+stat_segm <- 
+  function(data,
+           diag.var, 
+           order.var = NULL,
+           param = NULL,
+           seg.type = NULL, 
+           nseg){
   subdata <- data[!is.na(data$subsample_ind),]
   df.segm <- prep_segm(subdata,param,nseg = nseg, seg.type = seg.type)
-
-  subdata$indice <- 1:nrow(subdata)
+  
+  subdata$indice <- seq_len(nrow(subdata))
   df.states <- calc_stat_states(subdata,df.segm,diag.var,order.var)
   df.segm <- subsample_rename(df.segm,data,"begin")
   df.segm <- subsample_rename(df.segm,data,"end")
-
+  
   return(list(df.segm,df.states))
 }
 
@@ -49,7 +55,7 @@ stat_segm <- function(data, diag.var, order.var = NULL, param = NULL, seg.type =
 #'
 
 prep_segm <- function(data,param,seg.type=NULL,nseg=NULL){
-
+  
   if(seg.type=="segclust"){
     df.segm <- as.data.frame(param$rupt)
     colnames(df.segm) <- c("begin","end")
@@ -60,7 +66,7 @@ prep_segm <- function(data,param,seg.type=NULL,nseg=NULL){
     df.segm <- cbind(df.segm,tmp.tau)
     return(df.segm)
   } else {
-    rupt = param$t.est[nseg,1:nseg]
+    rupt <- param$t.est[nseg,1:nseg]
     if(nseg == 1) {
       df.segm <- data.frame(begin=c(1),end=rupt[1],state=1)
     } else {
@@ -85,15 +91,29 @@ prep_segm <- function(data,param,seg.type=NULL,nseg=NULL){
 #' \dontrun{calc_stat_states(data, diag.var = c("dist","angle"),
 #' order.var='dist', type='hmm',hmm.model=mod1.hmm)}
 #' @importFrom magrittr "%>%"
+#' @importFrom rlang .data
 #' @export
 
 calc_stat_states <- function(data,df.segm,diag.var,order.var=NULL)
 {
-  data$state <- df.segm[findInterval(data$indice,df.segm$begin,rightmost.closed = F,left.open = F),"state"]
-
-  eval_str <- paste("dplyr::group_by(data,state) %>% dplyr::summarise(prop=dplyr::n()/nrow(data),",paste("mu.",diag.var," = mean(",diag.var,",na.rm=T)",collapse=",",sep=""),",",paste("sd.",diag.var," = stats::sd(",diag.var,",na.rm=T)",collapse=",",sep=""),") %>% as.data.frame()",sep="")
-  df.states <- eval(parse(text=eval_str))
-  df.states$state_ordered  <- rank(df.states[,paste("mu",order.var[1],sep=".")])
+  data$state <- 
+    df.segm[
+      findInterval(data$indice,
+                   df.segm$begin,
+                   rightmost.closed = FALSE,
+                   left.open = FALSE),
+      "state"]
+  # stop("calc stat states")
+  # calculate mean and sd for diag.var variables and order them by order.var[1]
+  data %>% 
+    dplyr::group_by(.data$state) %>% 
+    dplyr::summarise(dplyr::across(.cols = dplyr::all_of({diag.var}), 
+                            .fns = list("mu" = ~mean(.x, na.rm = TRUE),
+                                        "sd" = ~stats::sd(.x, na.rm = TRUE)),
+                            .names = "{fn}.{.col}")) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::mutate(state_ordered = rank(.data[[paste0("mu.",order.var)]])) %>% 
+    as.data.frame()  ->  df.states 
   return(df.states)
 }
 
@@ -112,38 +132,53 @@ find_mu_sd <- function(df.states,diag.var){
   if(is.null(df.states$model)) df.states$model <- 'model'
   var_measure <- c(paste("mu.",diag.var,sep=""))
   mu.melt <-  reshape2::melt(df.states,measure.var = var_measure)
-    mu.melt$variable <- plyr::laply(strsplit(as.character(mu.melt$variable),split=".",fixed=T),function(x){paste(x[-1],collapse = ".")})
-    mu.melt$mu <- mu.melt$value
-    mu.melt$value <- NULL
-    mu.melt <- data.frame("state" = mu.melt$state,
-                          "state_ordered" = mu.melt$state_ordered,
-                          "variable" = mu.melt$variable,
-                          "mu" = mu.melt$mu,
-                          "prop" = mu.melt$prop,
-                          "model" = mu.melt$model)
-
-    var_measure <- c(paste("sd.",diag.var,sep=""))
-    sd.melt <-  reshape2::melt(df.states,measure.var = var_measure)
-    sd.melt$variable <- plyr::laply(strsplit(as.character(sd.melt$variable),split=".",fixed=T),function(x){paste(x[-1],collapse = ".")})
-    sd.melt$sd <- sd.melt$value
-    sd.melt$value <- NULL
-
-    # sd.melt <- with(sd.melt(data.frame(state,state_ordered,variable,sd,prop,model)))
-    sd.melt <- data.frame("state" = sd.melt$state,
-                          "state_ordered" = sd.melt$state_ordered,
-                          "variable" = sd.melt$variable,
-                          "sd" = sd.melt$sd,
-                          "prop" = sd.melt$prop,
-                          "model" = sd.melt$model)
-
-    mu.melt <- dplyr::left_join(mu.melt,sd.melt,by = c("state", "prop", "state_ordered", "variable","model"))
+  mu.melt$variable <- 
+    plyr::laply(
+      strsplit(as.character(mu.melt$variable),
+               split=".",fixed=TRUE),
+      function(x){paste(x[-1],collapse = ".")}
+      )
+  mu.melt$mu <- mu.melt$value
+  mu.melt$value <- NULL
+  mu.melt <- data.frame("state" = mu.melt$state,
+                        "state_ordered" = mu.melt$state_ordered,
+                        "variable" = mu.melt$variable,
+                        "mu" = mu.melt$mu,
+                        "model" = mu.melt$model)
+  
+  var_measure <- c(paste("sd.",diag.var,sep=""))
+  sd.melt <-  reshape2::melt(df.states,measure.var = var_measure)
+  sd.melt$variable <-
+    plyr::laply(
+      strsplit(as.character(sd.melt$variable),
+               split=".",fixed=TRUE),
+      function(x){paste(x[-1],collapse = ".")}
+      )
+  sd.melt$sd <- sd.melt$value
+  sd.melt$value <- NULL
+  
+  # sd.melt <-
+  # with(sd.melt(data.frame(state,state_ordered,variable,sd,prop,model)))
+  sd.melt <- data.frame("state" = sd.melt$state,
+                        "state_ordered" = sd.melt$state_ordered,
+                        "variable" = sd.melt$variable,
+                        "sd" = sd.melt$sd,
+                        "model" = sd.melt$model)
+  
+  mu.melt <-
+    dplyr::left_join(mu.melt,sd.melt,
+                     by = c("state", 
+                            "state_ordered", 
+                            "variable",
+                            "model"))
   return(mu.melt)
 }
 
 
 #' Calculate BIC
 #'
-#' \code{BIC} calculates BIC given log-likelihood, number of segment and number of class
+#' \code{BIC} calculates BIC given log-likelihood, number of segment and number
+#' of class
 #' @param likelihood log-likelihood
 #' @param ncluster number of cluster
 #' @param nseg number of segment
@@ -153,19 +188,22 @@ find_mu_sd <- function(df.states,diag.var){
 #' @export
 
 calc_BIC <- function(likelihood,ncluster,nseg,n){
-  BIC = likelihood - 0.5*(5*ncluster-1)*log(2*n) - 0.5 * nseg * log(2*n)
+  BIC  <- likelihood - 0.5*(5*ncluster-1)*log(2*n) - 0.5 * nseg * log(2*n)
   return(data.frame(BIC=BIC,ncluster=ncluster,nseg=nseg))
 }
 
 #' Check for repetition in the series
 #'
-#' \code{check_repetition} checks whether the series have identical or near-identical repetition larger than lmin.
-#' if that is the case, throw an error, the algorithm cannot yet handle these repetition,
-#' because variance on the segment would be null. 
+#' \code{check_repetition} checks whether the series have identical or
+#' near-identical repetition larger than lmin. if that is the case, throw an
+#' error, the algorithm cannot yet handle these repetition, because variance on
+#' the segment would be null.
 #' @param x the bivariate series to be tested
 #' @param lmin minimum length of segment
 #' @param rounding whether or not series are rounded
-#' @param magnitude number of magnitude of standard deviation below which values are rounded. i.e if magnitude = 3, difference smaller than one thousandth of the standard deviation are rounded to the same value.
+#' @param magnitude number of magnitude of standard deviation below which values
+#'   are rounded. i.e if magnitude = 3, difference smaller than one thousandth
+#'   of the standard deviation are rounded to the same value.
 #' @return a boolean, TRUE if there is any repetition larger or equal to lmin.
 #'
 #' @export
@@ -177,30 +215,30 @@ calc_BIC <- function(likelihood,ncluster,nseg,n){
 #' check_repetition(dat, lmin = 5)             
 
 check_repetition <- function(x,lmin, rounding = FALSE, magnitude = 3){
-    if(rounding){
-      sd_x1 <- stats::sd(x[1,])
-      magn1 <- - base::floor(log10(sd_x1)) +magnitude
-      x1 <- base::round(x[1,], digits = magn1)
-      sd_x2 <- stats::sd(x[2,])
-      magn2 <- - base::floor(log10(sd_x2)) +magnitude
-      x2 <- base::round(x[2,], digits = magn2)
-      rep_1 <- rle(x1)
-      rep_2 <- rle(x2)
-      if( any(rep_1$length >= lmin) || any(rep_2$length >= lmin)){
-        return(TRUE)
-      } else {
-        return(FALSE)
-      } 
+  if(rounding){
+    sd_x1 <- stats::sd(x[1,])
+    magn1 <- - base::floor(log10(sd_x1)) +magnitude
+    x1 <- base::round(x[1,], digits = magn1)
+    sd_x2 <- stats::sd(x[2,])
+    magn2 <- - base::floor(log10(sd_x2)) +magnitude
+    x2 <- base::round(x[2,], digits = magn2)
+    rep_1 <- rle(x1)
+    rep_2 <- rle(x2)
+    if( any(rep_1$length >= lmin) || any(rep_2$length >= lmin)){
+      return(TRUE)
     } else {
-      rep_1 <- rle(x[1,])
-      rep_2 <- rle(x[2,])
-      if( any(rep_1$length >= lmin) || any(rep_2$length >= lmin)){
-        return(TRUE)
-      } else {
-        return(FALSE)
-      } 
-    }
-   
+      return(FALSE)
+    } 
+  } else {
+    rep_1 <- rle(x[1,])
+    rep_2 <- rle(x[2,])
+    if( any(rep_1$length >= lmin) || any(rep_2$length >= lmin)){
+      return(TRUE)
+    } else {
+      return(FALSE)
+    } 
+  }
+  
 }
 
 #' Relabel states of a segmentation/clustering output
@@ -220,9 +258,17 @@ check_repetition <- function(x,lmin, rounding = FALSE, magnitude = 3){
 #'   
 #' @export
 
-relabel_states <- function(mode.segclust, newlabel, ncluster, nseg, order = TRUE){
-  tmp <- mode.segclust$outputs[[paste0(ncluster," class - ",nseg," segments")]]  
-  tmp$states$state_ordered <- newlabel[tmp$states$state_ordered]
-  mode.segclust$outputs[[paste0(ncluster," class - ",nseg," segments")]]  <- tmp
+relabel_states <- 
+  function(mode.segclust,
+           newlabel, 
+           ncluster, nseg, order = TRUE){
+  tmp <- mode.segclust$outputs[[
+    paste0(ncluster," class - ",nseg," segments")
+    ]]  
+  tmp$states$state_ordered <-
+    newlabel[tmp$states$state_ordered]
+  mode.segclust$outputs[[
+    paste0(ncluster," class - ",nseg," segments")
+    ]]  <- tmp
   mode.segclust
 }

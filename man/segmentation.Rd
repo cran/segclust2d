@@ -5,47 +5,50 @@
 \alias{segmentation.data.frame}
 \alias{segmentation.Move}
 \alias{segmentation.ltraj}
+\alias{segmentation_internal}
 \title{Segmentation of movement data - Generic function}
 \usage{
 segmentation(x, ...)
 
-\method{segmentation}{data.frame}(x, Kmax, lmin, type = "home-range",
-  seg.var, diag.var = seg.var, order.var = seg.var[1],
-  coord.names = c("x", "y"), ...)
+\method{segmentation}{data.frame}(x, ...)
 
-\method{segmentation}{Move}(x, Kmax, lmin, type = "home-range",
-  seg.var = NULL, diag.var = seg.var, order.var = seg.var[1],
-  coord.names = c("coords.x1", "coords.x2"), ...)
+\method{segmentation}{Move}(x, ...)
 
-\method{segmentation}{ltraj}(x, Kmax, lmin, type = "home-range",
-  seg.var = NULL, diag.var = seg.var, order.var = seg.var[1],
-  coord.names = c("x", "y"), ...)
+\method{segmentation}{ltraj}(x, ...)
+
+segmentation_internal(
+  x,
+  seg.var,
+  diag.var,
+  order.var,
+  lmin,
+  Kmax,
+  scale.variable,
+  sameSigma = FALSE,
+  ...
+)
 }
 \arguments{
-\item{x}{data used for segmentation. Supported: data.frame, Move object,
-ltraj object}
+\item{x}{data.frame with observations}
 
-\item{...}{additional parameters given to \code{\link{segmentation_internal}}}
+\item{...}{additional parameters given to \link{chooseseg_lavielle}}
 
-\item{Kmax}{maximum number of segments.}
+\item{seg.var}{names of the variables used for
+segmentation (either one or two names).}
+
+\item{diag.var}{names of the variables on which
+statistics are calculated.}
+
+\item{order.var}{names of the variable with which states are ordered.}
 
 \item{lmin}{minimum length of segments.}
 
-\item{type}{type of segmentation. Either "home-range" or "behavior". Changes
-default values of arguments order, scale.variable in the different
-functions used on the output. Default for segmentation: "home-range";
-default for segmentation/clustering : "behavior".}
+\item{Kmax}{maximum number of segments.}
 
-\item{seg.var}{for behavioral segmentation: names of the variables used for
-segmentation (either one or two names).}
+\item{scale.variable}{TRUE or FALSE for automatic scaling of variables
+(reduction and  centering)}
 
-\item{diag.var}{for behavioral segmentation: names of the variables on which
-statistics are calculated.}
-
-\item{order.var}{for behavioral segmentation: names of the variable with
-which states are ordered.}
-
-\item{coord.names}{for home-range segmentation and data.frame, names of coordinates. Default x and y. Not needed for move and ltraj objects}
+\item{sameSigma}{does segments have same variance ?}
 }
 \value{
 a \code{\link{segmentation-class}} object
@@ -60,9 +63,9 @@ locating rupture in the penalized likelihood.
 \examples{
 df <-  test_data()$data
 #' # data is a data.frame with column 'x' and 'y'
-# Simple segmentation with automatic subsampling if data has more than 1000 rows:
-res <- segmentation(df, Kmax = 30, lmin = 10, coord.names = c("x","y"), 
-type = 'home-range')
+# Simple segmentation with automatic subsampling
+# if data has more than 1000 rows:
+res <- segmentation(df, Kmax = 30, lmin = 10, seg.var = c("x","y"))
  # Plot results
  plot(res)
  segmap(res)
@@ -72,26 +75,25 @@ type = 'home-range')
 \dontrun{
 # Advanced options:
 # Run with automatic subsampling if df has more than 500 rows:
-res <- segmentation(df, Kmax = 30, lmin = 10, coord.names = c("x","y"), 
-type = 'home-range', subsample_over = 500)
+res <- segmentation(df, Kmax = 30, lmin = 10,
+ seg.var = c("x","y"),  subsample_over = 500)
 
 # Run with subsampling by 2:
-res <- segmentation(df, Kmax = 30, lmin = 10, coord.names = c("x","y"),
- type = 'home-range', subsample_by = 2)
+res <- segmentation(df, Kmax = 30, lmin = 10, 
+seg.var = c("x","y"), subsample_by = 2)
  
 # Disable subsampling:
-res <- segmentation(df, Kmax = 30, lmin = 10, coord.names = c("x","y"), 
-type = 'home-range', subsample = FALSE)
+res <- segmentation(df, Kmax = 30, lmin = 10,
+ seg.var = c("x","y"), subsample = FALSE)
 
 # Run on other kind of variables : 
- res <- segmentation(df, Kmax = 30, lmin = 10, seg.var = c("dist","angle"), 
- type = 'behavior')
+ res <- segmentation(df, Kmax = 30, lmin = 10, seg.var = c("dist","angle"))
  
 # Automatic scaling of variables for segmentation 
 (set a mean of 0 and a standard deviation of 1 for both variables)
 
- res <- segmentation(df, Kmax = 30, lmin = 10, seg.var = c("dist","angle"),
-  type = 'behavior', scale.variable = TRUE)
+ res <- segmentation(df, Kmax = 30, lmin = 10, 
+ seg.var = c("dist","angle"), scale.variable = TRUE)
  
 }
 }
