@@ -39,6 +39,7 @@
 #'\emph{Biometrics}, 63: 758-766. doi:10.1111/j.1541-0420.2006.00729.x
 #'
 #' @docType package
+#' @aliases segclust2d-package
 #' @name segclust2d
 #' @useDynLib segclust2d, .registration=TRUE
 #' @importFrom Rcpp evalCpp

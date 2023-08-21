@@ -3,6 +3,7 @@
 \docType{package}
 \name{segclust2d}
 \alias{segclust2d}
+\alias{segclust2d-package}
 \title{segclust2d: tools for segmentation of animal GPS movement data}
 \description{
 Provides two methods for segmentation and joint segmentation/clustering of
