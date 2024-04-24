@@ -27,7 +27,7 @@
 #'Report number 5339, Institut national de recherche en informatique et en
 #'automatique.
 #'
-#'Patin, R., Etienne, M. P., Lebarbier, E., Chamaill{\'e}-Jammes, S., 
+#'Patin, R., Etienne, M. P., Lebarbier, E., Chamaille-Jammes, S., 
 #'& Benhamou, S. (2020). Identifying stationary phases in
 #' multivariate time series for highlighting behavioural modes 
 #' and home range settlements. \emph{Journal of Animal Ecology}, 
@@ -38,9 +38,7 @@
 #'Segmentation/Clustering Model for the Analysis of Array CGH Data.
 #'\emph{Biometrics}, 63: 758-766. doi:10.1111/j.1541-0420.2006.00729.x
 #'
-#' @docType package
-#' @aliases segclust2d-package
 #' @name segclust2d
 #' @useDynLib segclust2d, .registration=TRUE
 #' @importFrom Rcpp evalCpp
-NULL
+"_PACKAGE"

@@ -1,7 +1,7 @@
 Package: segclust2d
 Type: Package
 Title: Bivariate Segmentation/Clustering Methods and Tools
-Version: 0.3.1
+Version: 0.3.3
 Authors@R: c(person("Remi", "Patin", role = c("aut", "cre"), email = "remi.patin@normale.fr"),
              person("Marie-Pierre", "Etienne", role = "aut"), 
              person("Emilie", "Lebarbier", role = "aut"), 
@@ -21,7 +21,7 @@ Description: Provides two methods for segmentation and joint segmentation/cluste
     The method is fully described in Patin et al (2018) <doi:10.1101/444794>.
 License: GPL-3
 LazyData: TRUE
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Depends: R (>= 3.3.0)
 Imports: RColorBrewer (>= 1.1-2), dplyr (>= 1.0.0), plyr (>= 1.8.4),
         reshape2 (>= 1.4.1), ggplot2(>= 2.1.0), magrittr, Rcpp, zoo,
@@ -34,11 +34,11 @@ VignetteBuilder: knitr
 Encoding: UTF-8
 Language: en-US
 NeedsCompilation: yes
-Packaged: 2023-08-21 07:57:22 UTC; patinr
+Packaged: 2024-04-24 07:49:55 UTC; rpatin
 Author: Remi Patin [aut, cre],
   Marie-Pierre Etienne [aut],
   Emilie Lebarbier [aut],
   Simon Benhamou [aut]
 Maintainer: Remi Patin <remi.patin@normale.fr>
 Repository: CRAN
-Date/Publication: 2023-08-21 08:50:02 UTC
+Date/Publication: 2024-04-24 08:00:03 UTC
